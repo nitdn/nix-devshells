@@ -40,6 +40,8 @@
           # Per-system attributes can be defined here. The self' and inputs'
           # module parameters provide easy access to attributes of the same
           # system.
+
+          # Change the template to <your-project>, must match Cargo.toml
           packages.default = self'.packages.template;
         };
       flake = {
