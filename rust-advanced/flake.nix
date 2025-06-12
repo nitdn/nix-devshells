@@ -80,7 +80,10 @@
             inputsFrom = [
               self'.devShells.rust
             ];
-            packages = [ pkgs.bacon ];
+            packages = [
+              pkgs.bacon
+              pkgs.vscode-extensions.vadimcn.vscode-lldb.adapter
+            ];
 
             LD_LIBRARY_PATH = builtins.toString (pkgs.lib.makeLibraryPath buildInputs);
           };

@@ -58,8 +58,7 @@
           # Per-system attributes can be defined here. The self' and inputs'
           # module parameters provide easy access to attributes of the same
           # system.
-          packages.default = self'.packages.template;
-          rust-project.crates."template".crane = {
+          rust-project.crates."subcrate-example".crane = {
             args = {
               inherit buildInputs;
               nativeBuildInputs = with pkgs; [
