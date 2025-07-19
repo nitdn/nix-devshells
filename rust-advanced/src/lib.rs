@@ -60,6 +60,7 @@ pub fn update(num: &mut u64, message: Message) {
     }
 }
 
+/// We live in a socity.
 fn checked_increment(num: u64) -> u64 {
     if num < 10 { num + 1 } else { num }
 }

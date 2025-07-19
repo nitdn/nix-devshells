@@ -1,5 +1,6 @@
 [package]
 name = "subcrate-example"
+description = "Subcrate example"
 version = "0.1.0"
 edition = "2024"
 

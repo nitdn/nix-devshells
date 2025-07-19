@@ -58,22 +58,23 @@
           # Per-system attributes can be defined here. The self' and inputs'
           # module parameters provide easy access to attributes of the same
           # system.
-          rust-project.crates."subcrate-example".crane = {
-            args = {
-              inherit buildInputs;
-              nativeBuildInputs = with pkgs; [
-                makeWrapper
-                pkg-config
-              ];
-            };
-            extraBuildArgs = {
-              postInstall = ''
-                # The Space between LD_LIBRARY_PATH and : is very important
-                wrapProgram $out/bin/template --prefix LD_LIBRARY_PATH : \
-                ${builtins.toString (pkgs.lib.makeLibraryPath buildInputs)}
-              '';
-            };
-          };
+          rust-project.crates."subcrate-example".path = ./subcrate-example;
+          # rust-project.crates."subcrate-example".crane = {
+          # args = {
+          #   inherit buildInputs;
+          #   nativeBuildInputs = with pkgs; [
+          #     makeWrapper
+          #     pkg-config
+          #   ];
+          # };
+          # extraBuildArgs = {
+          #   postInstall = ''
+          #     # The Space between LD_LIBRARY_PATH and : is very important
+          #     wrapProgram $out/bin/subcrate-example --prefix LD_LIBRARY_PATH : \
+          #     ${builtins.toString (pkgs.lib.makeLibraryPath buildInputs)}
+          #   '';
+          # };
+          # };
 
           devShells.default = pkgs.mkShell {
             inputsFrom = [
