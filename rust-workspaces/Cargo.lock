@@ -3,5 +3,9 @@
 version = 4
 
 [[package]]
+name = "mandelbrot"
+version = "0.1.0"
+
+[[package]]
 name = "subcrate-example"
 version = "0.1.0"
