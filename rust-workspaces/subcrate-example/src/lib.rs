@@ -3,14 +3,15 @@ pub fn add(left: u64, right: u64) -> u64 {
 }
 
 pub fn test_random_spaces() -> u64 {
+    // test for bad spaces, will not compile
     if true {
-        todo!()
+        unimplemented!()
     }
-    todo!()
+    unimplemented!()
 }
 
 pub fn test_pattern_matching((1 | 2 | 3 | _): u64) {
-    // why did i do this
+    unimplemented!("why did i do this")
 }
 
 #[cfg(test)]

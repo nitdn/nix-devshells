@@ -1,11 +1,13 @@
-const SCALE_FACTOR: u64 = 150;
+use rayon::prelude::*;
+
+const SCALE_FACTOR: u64 = 500;
 
 const X_SCALE: std::ops::Range<f64> = -2.00..0.47;
 const Y_SCALE: std::ops::Range<f64> = -1.12..1.12;
-const X_PAN: f64 = -1.5;
-const Y_PAN: f64 = -0.5;
-const VIEWPORT: u64 = 150;
-const MAX_ITERATION: usize = 1000;
+const X_PAN: f64 = -2.00;
+const Y_PAN: f64 = -1.12;
+const VIEWPORT: u64 = 500;
+const MAX_ITERATION: usize = 50000;
 const SYMBOL_ARRAY: [&str; 5] = [" # ", " * ", " - ", " . ", "   "];
 
 #[derive(Clone, Copy, Debug)]
@@ -23,18 +25,31 @@ impl Pixel {
 }
 
 fn main() {
-    (0..=VIEWPORT)
+    let frame_buffer: String = (0..=VIEWPORT)
+        .into_par_iter()
         .flat_map(|y_coord| {
-            println!();
-            (0..=VIEWPORT).map(move |x_coord| (x_coord, y_coord))
+            (0..=VIEWPORT)
+                .into_par_iter()
+                .map(move |x_coord| (x_coord, y_coord))
         })
-        .for_each(|coords| {
+        .fold(String::new, |mut string, coords| {
             let pixel = Pixel::new(coords);
 
-            let current_symbol = mandelbrot_pixel(pixel) * (SYMBOL_ARRAY.len()
-                - 1 ) /* Fencepost Error */ / MAX_ITERATION;
-            print!("{}", SYMBOL_ARRAY[current_symbol]);
-        });
+            // let current_symbol = mandelbrot_pixel(pixel) * (SYMBOL_ARRAY.len()
+            //     - 1 ) /* Fencepost Error */ / MAX_ITERATION;
+            let current_symbol = mandelbrot_pixel(pixel) % SYMBOL_ARRAY.len();
+            let rendered_pixel = SYMBOL_ARRAY[current_symbol];
+            if coords.0 == 0 {
+                string.push('\n');
+                string.push_str(rendered_pixel);
+                string
+            } else {
+                string.push_str(rendered_pixel);
+                string
+            }
+        })
+        .collect();
+    println!("{frame_buffer}");
 }
 
 fn mandelbrot_pixel(pixel: Pixel) -> usize {

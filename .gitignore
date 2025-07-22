@@ -2,3 +2,4 @@ result
 flake.lock
 rust-workspaces/.direnv
 rust-workspaces/target
+rust-workspaces/mandelbrot/output.txt
