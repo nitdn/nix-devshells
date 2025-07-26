@@ -83,6 +83,7 @@
             packages = with pkgs; [
               bacon
               just
+              watchexec
             ];
 
             LD_LIBRARY_PATH = builtins.toString (pkgs.lib.makeLibraryPath buildInputs);
