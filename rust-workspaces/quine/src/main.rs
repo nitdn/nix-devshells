@@ -1,1 +1,6 @@
-fn main() { println!("fn main() {{ println!({0:?}, {0:?} ); }}", "fn main() {{ println!({0:?}, {0:?} ); }}" ); }
+fn main() {
+    println!(
+        "fn main() {{\n    println!(\n        {0:?},\n        {0:?}\n    );\n}}",
+        "fn main() {{\n    println!(\n        {0:?},\n        {0:?}\n    );\n}}"
+    );
+}
