@@ -80,7 +80,10 @@
             inputsFrom = [
               self'.devShells.rust
             ];
-            packages = [ pkgs.bacon ];
+            packages = with pkgs; [
+              bacon
+              just
+            ];
 
             LD_LIBRARY_PATH = builtins.toString (pkgs.lib.makeLibraryPath buildInputs);
           };
