@@ -55,10 +55,11 @@
           ];
         in
         {
+          packages.default = self'.packages.mandelbrot;
           # Per-system attributes can be defined here. The self' and inputs'
           # module parameters provide easy access to attributes of the same
           # system.
-          rust-project.crates."subcrate-example".path = ./subcrate-example;
+          rust-project.crates."mandelbrot".path = ./mandelbrot;
           # rust-project.crates."subcrate-example".crane = {
           # args = {
           #   inherit buildInputs;
@@ -84,6 +85,7 @@
               bacon
               just
               watchexec
+              jj
             ];
 
             LD_LIBRARY_PATH = builtins.toString (pkgs.lib.makeLibraryPath buildInputs);
