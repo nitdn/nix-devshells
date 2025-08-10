@@ -1,6 +1,5 @@
 use std::sync::OnceLock;
 
-use pest::Parser;
 use pest::iterators::Pairs;
 
 use pest::pratt_parser::PrattParser;
@@ -9,7 +8,7 @@ pub mod ui_state;
 
 #[derive(Debug)]
 pub enum Expr {
-    Integer(i32),
+    Integer(i64),
     VarX,
     BinOp {
         lhs: Box<Self>,
@@ -47,8 +46,9 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> Expr {
     PRATT_PARSER
         .get_or_init(init_pratt)
         .map_primary(|primary| match primary.as_rule() {
-            Rule::integer => Expr::Integer(primary.as_str().parse::<i32>().unwrap()),
+            Rule::integer => Expr::Integer(primary.as_str().parse::<i64>().unwrap()),
             Rule::var_x => Expr::VarX,
+            Rule::expr => parse_expr(primary.into_inner()),
             rule => unreachable!("Expr::parse expected atom, found {:?}", rule),
         })
         .map_infix(|lhs, op, rhs| {
@@ -66,4 +66,54 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> Expr {
             }
         })
         .parse(pairs)
+}
+
+pub fn inorder_eval(expr: &Expr, var_x: i64) -> i64 {
+    match expr {
+        Expr::Integer(i) => *i,
+        Expr::VarX => var_x,
+        Expr::BinOp { lhs, op, rhs } => {
+            let lhs = inorder_eval(lhs, var_x);
+            let rhs = inorder_eval(rhs, var_x);
+            match op {
+                Op::Add => lhs + rhs,
+                Op::Subtract => lhs - rhs,
+                Op::Multiply => lhs * rhs,
+                Op::Divide => lhs / rhs,
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use pest::Parser;
+
+    use super::*;
+
+    #[test]
+    fn eval_parse_tree() {
+        let input = "2 + 3 * ( 2 + 3)";
+        let pairs = ExprParser::parse(Rule::equation, input)
+            .unwrap()
+            .next()
+            .unwrap()
+            .into_inner();
+        let expr = &parse_expr(pairs);
+        assert_eq!(inorder_eval(expr, 1), 17)
+    }
+
+    #[test]
+    fn eval_with_x() {
+        let x = 2;
+
+        let input = "2 + 3 * ( 2 - 3) * x";
+        let pairs = ExprParser::parse(Rule::equation, input)
+            .unwrap()
+            .next()
+            .unwrap()
+            .into_inner();
+        let expr = &parse_expr(pairs);
+        assert_eq!(inorder_eval(expr, x), -4)
+    }
 }

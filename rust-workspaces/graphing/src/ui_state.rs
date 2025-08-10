@@ -1,7 +1,7 @@
 use iced::widget::{self};
 use pest::{Parser, iterators::Pairs};
 
-use crate::{ExprParser, Rule, parse_expr};
+use crate::{ExprParser, Rule, inorder_eval, parse_expr};
 
 #[derive(Debug, Default)]
 pub struct Inputs {
@@ -15,11 +15,10 @@ pub enum Message {
     Submit,
 }
 
-fn print_logs(pairs: &mut Pairs<'_, Rule>) {
-    eprintln!(
-        "Parsed: {:#?}",
-        parse_expr(pairs.next().unwrap().into_inner())
-    );
+fn evaluate(pairs: &mut Pairs<'_, Rule>) -> i64 {
+    let expr = parse_expr(pairs.next().unwrap().into_inner());
+    // eprintln!("Parsed: {expr:#?}");
+    inorder_eval(&expr, 19)
 }
 
 impl Inputs {
@@ -31,8 +30,12 @@ impl Inputs {
             }
             Message::Submit => {
                 if let Ok(pairs) = ExprParser::parse(Rule::equation, &self.current_input) {
-                    print_logs(&mut pairs.clone());
-                    self.inputs.push(self.current_input.clone());
+                    let input = format!(
+                        "{} = {}",
+                        self.current_input.clone(),
+                        evaluate(&mut pairs.clone())
+                    );
+                    self.inputs.push(input);
                 }
             }
         }
