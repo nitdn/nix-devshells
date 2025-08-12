@@ -8,7 +8,7 @@ pub mod ui_state;
 
 #[derive(Debug)]
 pub enum Expr {
-    Integer(i64),
+    Integer(f32),
     VarX,
     BinOp {
         lhs: Box<Self>,
@@ -46,7 +46,7 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> Expr {
     PRATT_PARSER
         .get_or_init(init_pratt)
         .map_primary(|primary| match primary.as_rule() {
-            Rule::integer => Expr::Integer(primary.as_str().parse::<i64>().unwrap()),
+            Rule::integer => Expr::Integer(primary.as_str().parse::<f32>().unwrap()),
             Rule::var_x => Expr::VarX,
             Rule::expr => parse_expr(primary.into_inner()),
             rule => unreachable!("Expr::parse expected atom, found {:?}", rule),
@@ -68,7 +68,7 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> Expr {
         .parse(pairs)
 }
 
-pub fn inorder_eval(expr: &Expr, var_x: i64) -> i64 {
+pub fn inorder_eval(expr: &Expr, var_x: f32) -> f32 {
     match expr {
         Expr::Integer(i) => *i,
         Expr::VarX => var_x,
@@ -100,12 +100,12 @@ mod tests {
             .unwrap()
             .into_inner();
         let expr = &parse_expr(pairs);
-        assert_eq!(inorder_eval(expr, 1), 17)
+        assert_eq!(inorder_eval(expr, 1.0), 17.0)
     }
 
     #[test]
     fn eval_with_x() {
-        let x = 2;
+        let x = 2.0;
 
         let input = "2 + 3 * ( 2 - 3) * x";
         let pairs = ExprParser::parse(Rule::equation, input)
@@ -114,6 +114,6 @@ mod tests {
             .unwrap()
             .into_inner();
         let expr = &parse_expr(pairs);
-        assert_eq!(inorder_eval(expr, x), -4)
+        assert_eq!(inorder_eval(expr, x), -4.0)
     }
 }
