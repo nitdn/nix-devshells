@@ -84,7 +84,7 @@ impl Inputs {
             Message::Update(text) => {
                 eprintln!("{text}");
                 self.current_input = text;
-                Task::none()
+                return Task::none();
             }
             Message::Submit => {
                 if let Ok(mut pairs) = ExprParser::parse(Rule::equation, &self.current_input) {
