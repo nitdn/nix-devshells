@@ -84,6 +84,7 @@
             packages = with pkgs; [
               bacon
               just
+              meld
               watchexec
               jj
             ];

@@ -8,7 +8,8 @@ pub mod ui_state;
 
 #[derive(Debug)]
 pub enum Expr {
-    Integer(f32),
+    Number(f32),
+    UnaryMinus(Box<Expr>),
     VarX,
     BinOp {
         lhs: Box<Self>,
@@ -23,6 +24,7 @@ pub enum Op {
     Subtract,
     Multiply,
     Divide,
+    Modulo,
 }
 
 #[derive(pest_derive::Parser)]
@@ -39,14 +41,15 @@ pub fn init_pratt() -> PrattParser<Rule> {
     PrattParser::new()
         // Addition and subtract have equal precedence
         .op(Op::infix(add, Left) | Op::infix(subtract, Left))
-        .op(Op::infix(multiply, Left) | Op::infix(divide, Left))
+        .op(Op::infix(multiply, Left) | Op::infix(divide, Left) | Op::infix(modulo, Left))
+        .op(Op::prefix(unary_minus))
 }
 
 pub fn parse_expr(pairs: Pairs<Rule>) -> Expr {
     PRATT_PARSER
         .get_or_init(init_pratt)
         .map_primary(|primary| match primary.as_rule() {
-            Rule::integer => Expr::Integer(primary.as_str().parse::<f32>().unwrap()),
+            Rule::number => Expr::Number(primary.as_str().parse::<f32>().unwrap()),
             Rule::var_x => Expr::VarX,
             Rule::expr => parse_expr(primary.into_inner()),
             rule => unreachable!("Expr::parse expected atom, found {:?}", rule),
@@ -57,6 +60,7 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> Expr {
                 Rule::subtract => Op::Subtract,
                 Rule::multiply => Op::Multiply,
                 Rule::divide => Op::Divide,
+                Rule::modulo => Op::Modulo,
                 rule => unreachable!("Expr::parse expected infix operation, found {:?}", rule),
             };
             Expr::BinOp {
@@ -65,12 +69,16 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> Expr {
                 rhs: Box::new(rhs),
             }
         })
+        .map_prefix(|op, rhs| match op.as_rule() {
+            Rule::unary_minus => Expr::UnaryMinus(Box::new(rhs)),
+            _ => unreachable!(),
+        })
         .parse(pairs)
 }
 
 pub fn inorder_eval(expr: &Expr, var_x: f32) -> f32 {
     match expr {
-        Expr::Integer(i) => *i,
+        Expr::Number(i) => *i,
         Expr::VarX => var_x,
         Expr::BinOp { lhs, op, rhs } => {
             let lhs = inorder_eval(lhs, var_x);
@@ -80,8 +88,10 @@ pub fn inorder_eval(expr: &Expr, var_x: f32) -> f32 {
                 Op::Subtract => lhs - rhs,
                 Op::Multiply => lhs * rhs,
                 Op::Divide => lhs / rhs,
+                Op::Modulo => lhs % rhs,
             }
         }
+        Expr::UnaryMinus(expr) => -inorder_eval(expr, var_x),
     }
 }
 
@@ -93,14 +103,25 @@ mod tests {
 
     #[test]
     fn eval_parse_tree() {
-        let input = "2 + 3 * ( 2 + 3)";
+        let input = "2 + 3.5 * ( 2 + 3)";
         let pairs = ExprParser::parse(Rule::equation, input)
             .unwrap()
             .next()
             .unwrap()
             .into_inner();
         let expr = &parse_expr(pairs);
-        assert_eq!(inorder_eval(expr, 1.0), 17.0)
+        assert_eq!(inorder_eval(expr, 1.0), 19.5)
+    }
+    #[test]
+    fn test_unary_minus() {
+        let input = "-3";
+        let pairs = ExprParser::parse(Rule::equation, input)
+            .unwrap()
+            .next()
+            .unwrap()
+            .into_inner();
+        let expr = &parse_expr(pairs);
+        assert_eq!(inorder_eval(expr, 0.0), -3.0)
     }
 
     #[test]

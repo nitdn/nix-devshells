@@ -1,3 +1,4 @@
+*.orig
 result
 flake.lock
 rust-workspaces/.direnv
