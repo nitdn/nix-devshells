@@ -15,6 +15,7 @@ pub struct Inputs {
     pixels: Vec<u8>,
     x_pan: f32,
     y_pan: f32,
+    is_graphing: bool,
 }
 
 impl Default for Inputs {
@@ -29,6 +30,7 @@ impl Default for Inputs {
             x_pan: Default::default(),
             y_pan: Default::default(),
             pixels,
+            is_graphing: true,
         }
     }
 }
@@ -39,6 +41,7 @@ pub enum Message {
     Submit,
     Slider(f32),
     StoreX(f32),
+    ToggleGraphing,
 }
 const RESOLUTION: usize = 1024;
 const FONT_SIZE: u16 = 24;
@@ -103,10 +106,23 @@ impl Inputs {
                 self.current_x_val = value;
                 Task::none()
             }
+            Message::ToggleGraphing => {
+                self.is_graphing = !self.is_graphing;
+                Task::none()
+            }
         };
+        if self.is_graphing {
+            self.render_update()
+        };
+        // widget::text_input::focus("Text Box")
+        task
+    }
+
+    fn render_update(&mut self) {
         self.pixels = vec![255u8; RESOLUTION * RESOLUTION * 4];
 
-        paint_pixel(&mut self.pixels, self.x_pan, |_, _| false); // clean previous painting
+        paint_pixel(&mut self.pixels, self.x_pan, |_, _| false);
+        // clean previous painting
         for (_, expr, _) in &self.inputs {
             paint_pixel(&mut self.pixels, self.x_pan, |x, y| {
                 let eval_x_0 = inorder_eval(expr, x);
@@ -115,8 +131,6 @@ impl Inputs {
                 (eval_x_1 - eval_x_0).abs() >= (eval_x_1 - y).abs()
             })
         }
-        // widget::text_input::focus("Text Box")
-        task
     }
     pub fn view(&self) -> iced::Element<'_, Message> {
         let items_list = self.inputs.iter().map(|item| {
@@ -144,19 +158,27 @@ impl Inputs {
         ]);
         // let columns = widget::column![];
 
-        let columns = widget::column![
-            widget::scrollable(widget::image(widget::image::Handle::from_rgba(
-                RESOLUTION as u32,
-                RESOLUTION as u32,
-                self.pixels.clone()
-            )))
-            .height(Fill),
-            widget::slider(
-                -(RESOLUTION as f32 / 2.0)..=RESOLUTION as f32 / 2.0,
-                self.x_pan,
-                Message::Slider
-            )
-        ];
+        let columns = if self.is_graphing {
+            widget::column![
+                widget::scrollable(widget::image(widget::image::Handle::from_rgba(
+                    RESOLUTION as u32,
+                    RESOLUTION as u32,
+                    self.pixels.clone()
+                )))
+                .height(Fill),
+                widget::slider(
+                    -(RESOLUTION as f32 / 2.0)..=RESOLUTION as f32 / 2.0,
+                    self.x_pan,
+                    Message::Slider
+                )
+            ]
+        } else {
+            widget::column![]
+        }
+        .push(
+            widget::button(widget::text!("Toggle Graphing").size(FONT_SIZE))
+                .on_press(Message::ToggleGraphing),
+        );
         widget::container(columns.extend(items_list).push(row)).into()
     }
 }

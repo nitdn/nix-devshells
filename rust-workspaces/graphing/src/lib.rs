@@ -25,6 +25,9 @@ pub enum Op {
     Multiply,
     Divide,
     Modulo,
+    FloorDiv,
+    Pow,
+    Log,
 }
 
 #[derive(pest_derive::Parser)]
@@ -41,7 +44,12 @@ pub fn init_pratt() -> PrattParser<Rule> {
     PrattParser::new()
         // Addition and subtract have equal precedence
         .op(Op::infix(add, Left) | Op::infix(subtract, Left))
-        .op(Op::infix(multiply, Left) | Op::infix(divide, Left) | Op::infix(modulo, Left))
+        .op(Op::infix(multiply, Left)
+            | Op::infix(divide, Left)
+            | Op::infix(modulo, Left)
+            | Op::infix(floor_division, Left))
+        .op(Op::infix(pow, Left))
+        .op(Op::infix(log, Left))
         .op(Op::prefix(unary_minus))
 }
 
@@ -61,6 +69,9 @@ pub fn parse_expr(pairs: Pairs<Rule>) -> Expr {
                 Rule::multiply => Op::Multiply,
                 Rule::divide => Op::Divide,
                 Rule::modulo => Op::Modulo,
+                Rule::floor_division => Op::FloorDiv,
+                Rule::pow => Op::Pow,
+                Rule::log => Op::Log,
                 rule => unreachable!("Expr::parse expected infix operation, found {:?}", rule),
             };
             Expr::BinOp {
@@ -89,6 +100,9 @@ pub fn inorder_eval(expr: &Expr, var_x: f32) -> f32 {
                 Op::Multiply => lhs * rhs,
                 Op::Divide => lhs / rhs,
                 Op::Modulo => lhs % rhs,
+                Op::FloorDiv => lhs.div_euclid(rhs),
+                Op::Pow => lhs.powf(rhs),
+                Op::Log => lhs.log(rhs),
             }
         }
         Expr::UnaryMinus(expr) => -inorder_eval(expr, var_x),
@@ -112,6 +126,22 @@ mod tests {
         let expr = &parse_expr(pairs);
         assert_eq!(inorder_eval(expr, 1.0), 19.5)
     }
+
+    #[test]
+    fn all_necessary_operators() {
+        let ops = ["+", "-", "*", "/", "%", "//", "^", "log"];
+        for op in ops {
+            let input = format!("2 {op} 3");
+            let pairs = ExprParser::parse(Rule::equation, &input)
+                .unwrap()
+                .next()
+                .unwrap()
+                .into_inner();
+            let expr = &parse_expr(pairs);
+            inorder_eval(expr, 0.0);
+        }
+    }
+
     #[test]
     fn test_unary_minus() {
         let input = "-3";
