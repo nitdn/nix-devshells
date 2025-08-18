@@ -11,7 +11,8 @@ use crate::{Expr, ExprParser, Rule, inorder_eval, parse_expr};
 pub struct Inputs {
     current_input: String,
     current_x_val: f32,
-    inputs: Vec<(String, Expr, f32)>,
+    current_result: f32,
+    inputs: Vec<(String, Expr, String)>,
     is_graphing: bool,
     pixels: Vec<u8>,
     scale: u64,
@@ -33,6 +34,7 @@ impl Default for Inputs {
             scale: 1,
             x_pan: Default::default(),
             y_pan: Default::default(),
+            current_result: Default::default(),
         }
     }
 }
@@ -41,6 +43,7 @@ impl Default for Inputs {
 pub enum Message {
     Slider(f32),
     StoreX(f32),
+    EditExpression(String),
     Submit,
     ToggleGraphing(bool),
     Update(String),
@@ -106,14 +109,14 @@ impl Inputs {
                     let input = if is_x {
                         format!(
                             "{} at x = {} is {}",
-                            self.current_input.clone(),
-                            self.current_x_val,
-                            value
+                            self.current_input, self.current_x_val, value
                         )
                     } else {
-                        format!("{} = {}", self.current_input.clone(), value)
+                        format!("{} = {}", self.current_input, value)
                     };
-                    self.inputs.push((input, expr, value));
+                    self.inputs.push((input, expr, self.current_input.clone()));
+                    self.current_input = value.to_string();
+                    self.current_result = value;
                 }
                 widget::text_input::focus("Text Box")
             }
@@ -121,22 +124,18 @@ impl Inputs {
                 self.x_pan = slider;
                 Task::none()
             }
-
             Message::VerticalSlider(slider) => {
                 self.y_pan = slider;
                 Task::none()
             }
-
             Message::ZoomIn => {
                 self.scale += 5;
                 Task::none()
             }
-
             Message::ZoomOut => {
                 self.scale = self.scale.saturating_sub(5).max(1);
                 Task::none()
             }
-
             Message::StoreX(value) => {
                 self.current_x_val = value;
                 return Task::none();
@@ -144,6 +143,10 @@ impl Inputs {
             Message::ToggleGraphing(is_graphing) => {
                 self.is_graphing = is_graphing;
                 Task::none()
+            }
+            Message::EditExpression(current_input) => {
+                self.current_input = current_input;
+                return Task::none();
             }
         };
         if self.is_graphing {
@@ -174,8 +177,8 @@ impl Inputs {
             widget::row![
                 widget::text(&item.0).size(FONT_SIZE),
                 widget::horizontal_space(),
-                widget::button(widget::text!("Store into x").size(FONT_SIZE))
-                    .on_press(Message::StoreX(item.2))
+                widget::button(widget::text!("Edit").size(FONT_SIZE))
+                    .on_press(Message::EditExpression(item.2.clone()))
             ]
             .into()
         });
@@ -191,9 +194,10 @@ impl Inputs {
                 .on_input(Message::Update)
                 .on_submit(Message::Submit),
             widget::button(
-                widget::text!("x = {} (Click to reset)", self.current_x_val).size(FONT_SIZE)
+                widget::text!("x = {} (Click to save last result)", self.current_x_val)
+                    .size(FONT_SIZE)
             )
-            .on_press(Message::StoreX(Default::default())),
+            .on_press(Message::StoreX(self.current_result)),
             widget::button(widget::text!("Evaluate").size(FONT_SIZE)).on_press(Message::Submit),
         ]);
         // let columns = widget::column![];
