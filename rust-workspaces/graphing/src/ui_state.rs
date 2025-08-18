@@ -165,7 +165,7 @@ impl Inputs {
             |x, y, scale| {
                 self.inputs.iter().any(|(_, expr, _)| {
                     let eval_x_0 = inorder_eval(expr, x);
-                    let x_1 = x + 1.5 / scale as f32;
+                    let x_1 = x + 1.0 / scale as f32;
                     let eval_x_1 = inorder_eval(expr, x_1);
                     (eval_x_1 - eval_x_0).abs() >= (eval_x_1 - y).abs()
                 })
