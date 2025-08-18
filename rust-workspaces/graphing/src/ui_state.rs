@@ -1,7 +1,7 @@
 use iced::{
     Length::Fill,
     Task,
-    widget::{self},
+    widget::{self, vertical_space},
 };
 use pest::Parser;
 
@@ -42,7 +42,7 @@ pub enum Message {
     Slider(f32),
     StoreX(f32),
     Submit,
-    ToggleGraphing,
+    ToggleGraphing(bool),
     Update(String),
     VerticalSlider(f32),
     ZoomIn,
@@ -75,7 +75,7 @@ fn paint_pixel<T: Fn(f32, f32, u64) -> bool>(
                     continue;
                 }
                 if predicate(x_domain, y_domain, scale) {
-                    pixel[0] = 0;
+                    pixel[0] = 200;
                     pixel[1] = 0;
                     pixel[2] = 0;
                     pixel[3] = 255;
@@ -93,10 +93,14 @@ impl Inputs {
             }
             Message::Submit => {
                 if let Ok(mut pairs) = ExprParser::parse(Rule::equation, &self.current_input) {
+                    let is_x = pairs
+                        .clone()
+                        .flatten()
+                        .any(|pair| pair.as_rule() == Rule::var_x);
                     let expr = parse_expr(pairs.next().unwrap().into_inner());
                     let value = inorder_eval(&expr, self.current_x_val);
 
-                    let input = if self.current_input.contains('x') {
+                    let input = if is_x {
                         format!(
                             "{} at x = {} is {}",
                             self.current_input.clone(),
@@ -134,8 +138,8 @@ impl Inputs {
                 self.current_x_val = value;
                 Task::none()
             }
-            Message::ToggleGraphing => {
-                self.is_graphing = !self.is_graphing;
+            Message::ToggleGraphing(is_graphing) => {
+                self.is_graphing = is_graphing;
                 Task::none()
             }
         };
@@ -183,7 +187,9 @@ impl Inputs {
             .into()
         });
 
-        let row = widget::container(widget::row![
+        let scrollable_items_list =
+            widget::container(widget::scrollable(widget::column(items_list))).max_height(600);
+        let text_input_row = widget::container(widget::row![
             // widget::Row::from_vec(items_list),
             widget::text_input("Type an equation...", &self.current_input)
                 .id("Text Box")
@@ -227,12 +233,15 @@ impl Inputs {
                 ]
             ]
         } else {
-            widget::column![]
+            widget::column![vertical_space()]
         }
         .push(
-            widget::button(widget::text!("Toggle Graphing").size(FONT_SIZE))
-                .on_press(Message::ToggleGraphing),
-        );
-        widget::container(columns.extend(items_list).push(row)).into()
+            widget::toggler(self.is_graphing)
+                .label("Toggle Graphing")
+                .text_size(FONT_SIZE)
+                .on_toggle(Message::ToggleGraphing),
+        )
+        .height(Fill);
+        widget::container(columns.push(scrollable_items_list).push(text_input_row)).into()
     }
 }
