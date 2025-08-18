@@ -82,6 +82,7 @@
               self'.devShells.rust
             ];
             packages = with pkgs; [
+              self'.packages.graphing
               bacon
               just
               meld
