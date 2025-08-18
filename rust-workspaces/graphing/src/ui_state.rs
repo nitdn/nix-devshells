@@ -67,17 +67,20 @@ fn paint_pixel<T: Fn(f32, f32, u64) -> bool>(
                 let y_origin = RESOLUTION as f32 / 2.0;
                 let x_domain = (x_coord as f32 - x_origin - x_pan) / scale as f32;
                 let y_domain = (y_coord as f32 - y_origin - y_pan) / scale as f32;
-                if x_domain == 0.0 || y_domain == 0.0 {
-                    pixel[0] = 0;
-                    pixel[1] = 0;
-                    pixel[2] = 0;
-                    pixel[3] = 100;
-                    continue;
-                }
                 if predicate(x_domain, y_domain, scale) {
                     pixel[0] = 200;
                     pixel[1] = 0;
                     pixel[2] = 0;
+                    pixel[3] = 255;
+                } else if x_domain == 0.0 || y_domain == 0.0 {
+                    pixel[0] = 0;
+                    pixel[1] = 0;
+                    pixel[2] = 0;
+                    pixel[3] = 100;
+                } else {
+                    pixel[0] = 255;
+                    pixel[1] = 255;
+                    pixel[2] = 255;
                     pixel[3] = 255;
                 }
             }
@@ -136,7 +139,7 @@ impl Inputs {
 
             Message::StoreX(value) => {
                 self.current_x_val = value;
-                Task::none()
+                return Task::none();
             }
             Message::ToggleGraphing(is_graphing) => {
                 self.is_graphing = is_graphing;
@@ -151,30 +154,20 @@ impl Inputs {
     }
 
     fn render_update(&mut self) {
-        self.pixels = vec![255u8; RESOLUTION * RESOLUTION * 4];
-
         paint_pixel(
             &mut self.pixels,
             self.x_pan,
             self.y_pan,
             self.scale,
-            |_, _, _| false,
-        );
-        // clean previous painting
-        for (_, expr, _) in &self.inputs {
-            paint_pixel(
-                &mut self.pixels,
-                self.x_pan,
-                self.y_pan,
-                self.scale,
-                |x, y, scale| {
+            |x, y, scale| {
+                self.inputs.iter().any(|(_, expr, _)| {
                     let eval_x_0 = inorder_eval(expr, x);
-                    let x_1 = x + 1.0 / scale as f32;
+                    let x_1 = x + 1.5 / scale as f32;
                     let eval_x_1 = inorder_eval(expr, x_1);
                     (eval_x_1 - eval_x_0).abs() >= (eval_x_1 - y).abs()
-                },
-            )
-        }
+                })
+            },
+        )
     }
     pub fn view(&self) -> iced::Element<'_, Message> {
         let items_list = self.inputs.iter().map(|item| {
@@ -186,6 +179,7 @@ impl Inputs {
             ]
             .into()
         });
+        // let items_list = [];
 
         let scrollable_items_list =
             widget::container(widget::scrollable(widget::column(items_list))).max_height(600);
