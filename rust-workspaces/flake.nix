@@ -4,9 +4,10 @@
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
+    crane.url = "github:ipetkov/crane";
     rust-flake.url = "github:juspay/rust-flake";
     rust-flake.inputs.nixpkgs.follows = "nixpkgs";
+    rust-flake.inputs.crane.follows = "crane";
   };
 
   outputs =
@@ -30,9 +31,10 @@
       perSystem =
         {
           config,
-          self',
           inputs',
+          lib,
           pkgs,
+          self',
           system,
           ...
         }:
@@ -53,12 +55,27 @@
             libxkbcommon
 
           ];
+          craneLib = inputs.crane.mkLib pkgs;
+
+          unfilteredRoot = ./.; # The original, unfiltered source
+          src = lib.fileset.toSource {
+            root = unfilteredRoot;
+            fileset = lib.fileset.unions [
+              # Default files from crane (Rust and cargo files)
+              (craneLib.fileset.commonCargoSources unfilteredRoot)
+              # Also keep any markdown/pest files
+              (lib.fileset.fileFilter (file: file.hasExt "md" || file.hasExt "pest") unfilteredRoot)
+              # Example of a folder for images, icons, etc
+              (lib.fileset.maybeMissing ./assets)
+            ];
+          };
         in
         {
           packages.default = self'.packages.mandelbrot;
           # Per-system attributes can be defined here. The self' and inputs'
           # module parameters provide easy access to attributes of the same
           # system.
+          rust-project.src = src;
           rust-project.crates."mandelbrot".path = ./mandelbrot;
           # rust-project.crates."subcrate-example".crane = {
           # args = {
@@ -84,9 +101,9 @@
             packages = with pkgs; [
               bacon
               just
+              jujutsu
               meld
               watchexec
-              jj
             ];
 
             LD_LIBRARY_PATH = builtins.toString (pkgs.lib.makeLibraryPath buildInputs);
