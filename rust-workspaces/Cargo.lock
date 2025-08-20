@@ -1322,6 +1322,7 @@ dependencies = [
  "iced",
  "pest",
  "pest_derive",
+ "rayon",
 ]
 
 [[package]]

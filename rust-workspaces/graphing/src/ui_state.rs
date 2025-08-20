@@ -4,6 +4,7 @@ use iced::{
     widget::{self, vertical_space},
 };
 use pest::Parser;
+use rayon::prelude::*;
 
 use crate::{Expr, ExprParser, Rule, inorder_eval, parse_expr};
 
@@ -53,7 +54,7 @@ pub enum Message {
 }
 const RESOLUTION: usize = 1024;
 const FONT_SIZE: u16 = 24;
-fn paint_pixel<T: Fn(f32, f32, u64) -> bool>(
+fn paint_pixel<T: Fn(f32, f32, u64) -> bool + std::marker::Sync>(
     pixels: &mut [u8],
     x_pan: f32,
     y_pan: f32,
@@ -61,7 +62,7 @@ fn paint_pixel<T: Fn(f32, f32, u64) -> bool>(
     predicate: T,
 ) {
     pixels
-        .rchunks_exact_mut(RESOLUTION * 4)
+        .par_rchunks_exact_mut(RESOLUTION * 4)
         .enumerate()
         .map(|(y_coord, line)| (y_coord, line.chunks_mut(4).enumerate()))
         .for_each(|(y_coord, line)| {
@@ -163,7 +164,7 @@ impl Inputs {
             self.y_pan,
             self.scale,
             |x, y, scale| {
-                self.inputs.iter().any(|(_, expr, _)| {
+                self.inputs.par_iter().any(|(_, expr, _)| {
                     let eval_x_0 = inorder_eval(expr, x);
                     let x_1 = x + 1.0 / scale as f32;
                     let eval_x_1 = inorder_eval(expr, x_1);

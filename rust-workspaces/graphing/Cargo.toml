@@ -8,3 +8,4 @@ description.workspace = true
 iced = { version = "0.13.1", features = ["advanced", "image"] }
 pest = "2.8.1"
 pest_derive = "2.8.1"
+rayon = "1.11.0"
