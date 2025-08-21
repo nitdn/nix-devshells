@@ -48,9 +48,9 @@ pub fn init_pratt() -> PrattParser<Rule> {
             | Op::infix(divide, Left)
             | Op::infix(modulo, Left)
             | Op::infix(floor_division, Left))
+        .op(Op::prefix(unary_minus))
         .op(Op::infix(pow, Left))
         .op(Op::infix(log, Left))
-        .op(Op::prefix(unary_minus))
 }
 
 pub fn parse_expr(pairs: Pairs<Rule>) -> Expr {

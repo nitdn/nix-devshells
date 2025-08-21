@@ -16,7 +16,7 @@ pub struct Inputs {
     inputs: Vec<(String, Expr, String)>,
     is_graphing: bool,
     pixels: Vec<u8>,
-    scale: u64,
+    scale: f32,
     x_pan: f32,
     y_pan: f32,
 }
@@ -24,7 +24,7 @@ pub struct Inputs {
 impl Default for Inputs {
     fn default() -> Self {
         let mut pixels = vec![255u8; RESOLUTION * RESOLUTION * 4];
-        paint_pixel(&mut pixels, 0.0, 0.0, 1, |_, _, _| false); // set up axes
+        paint_pixel(&mut pixels, 0.0, 0.0, 1.0, |_, _, _| false); // set up axes
 
         Self {
             current_input: Default::default(),
@@ -32,7 +32,7 @@ impl Default for Inputs {
             inputs: Default::default(),
             is_graphing: true,
             pixels,
-            scale: 1,
+            scale: 1.0,
             x_pan: Default::default(),
             y_pan: Default::default(),
             current_result: Default::default(),
@@ -54,11 +54,11 @@ pub enum Message {
 }
 const RESOLUTION: usize = 1024;
 const FONT_SIZE: u16 = 24;
-fn paint_pixel<T: Fn(f32, f32, u64) -> bool + std::marker::Sync>(
+fn paint_pixel<T: Fn(f32, f32, f32) -> bool + std::marker::Sync>(
     pixels: &mut [u8],
     x_pan: f32,
     y_pan: f32,
-    scale: u64,
+    scale: f32,
     predicate: T,
 ) {
     pixels
@@ -67,16 +67,24 @@ fn paint_pixel<T: Fn(f32, f32, u64) -> bool + std::marker::Sync>(
         .map(|(y_coord, line)| (y_coord, line.chunks_mut(4).enumerate()))
         .for_each(|(y_coord, line)| {
             for (x_coord, pixel) in line {
-                let x_origin = RESOLUTION as f32 / 2.0;
-                let y_origin = RESOLUTION as f32 / 2.0;
-                let x_domain = (x_coord as f32 - x_origin - x_pan) / scale as f32;
-                let y_domain = (y_coord as f32 - y_origin - y_pan) / scale as f32;
+                let x_center = RESOLUTION as f32 / 2.0;
+                let y_center = RESOLUTION as f32 / 2.0;
+                // For each increment of the pixel we actually increment x by
+                // 1/(scale)
+                // and the x_domain of a pixel is however
+                // however far the x_center of the viewport
+                // was from the origin
+                // which is x_pan + (-1/2 RESOULUTION), as we want the left edge
+                // of the viewport to be negative when the x_pan is zero
+
+                let x_domain = x_pan + (-x_center + x_coord as f32) / scale;
+                let y_domain = y_pan + (-y_center + y_coord as f32) / scale;
                 if predicate(x_domain, y_domain, scale) {
                     pixel[0] = 200;
                     pixel[1] = 0;
                     pixel[2] = 0;
                     pixel[3] = 255;
-                } else if x_domain == 0.0 || y_domain == 0.0 {
+                } else if x_domain.abs() <= 1.0 / scale || y_domain.abs() <= 1.0 / scale {
                     pixel[0] = 0;
                     pixel[1] = 0;
                     pixel[2] = 0;
@@ -122,19 +130,19 @@ impl Inputs {
                 widget::text_input::focus("Text Box")
             }
             Message::Slider(slider) => {
-                self.x_pan = slider;
+                self.x_pan += slider / self.scale;
                 Task::none()
             }
             Message::VerticalSlider(slider) => {
-                self.y_pan = slider;
+                self.y_pan += slider / self.scale;
                 Task::none()
             }
             Message::ZoomIn => {
-                self.scale += 5;
+                self.scale *= 1.0 + 5.0 / self.scale;
                 Task::none()
             }
             Message::ZoomOut => {
-                self.scale = self.scale.saturating_sub(5).max(1);
+                self.scale /= 1.0 + 5.0 / self.scale;
                 Task::none()
             }
             Message::StoreX(value) => {
@@ -165,10 +173,14 @@ impl Inputs {
             self.scale,
             |x, y, scale| {
                 self.inputs.par_iter().any(|(_, expr, _)| {
-                    let eval_x_0 = inorder_eval(expr, x);
-                    let x_1 = x + 1.0 / scale as f32;
+                    let x_0 = x - 1.0 / scale;
+                    let eval_x_0 = inorder_eval(expr, x_0);
+                    let x_1 = x + 1.0 / scale;
                     let eval_x_1 = inorder_eval(expr, x_1);
-                    (eval_x_1 - eval_x_0).abs() >= (eval_x_1 - y).abs()
+                    let start = eval_x_0.min(eval_x_1);
+                    let end = eval_x_0.max(eval_x_1);
+                    start <= y && y <= end
+                    // (start..=end).contains(&y)
                 })
             },
         )
@@ -213,17 +225,9 @@ impl Inputs {
                     ))
                     .width(Fill)
                     .height(Fill),
-                    widget::vertical_slider(
-                        -(RESOLUTION as f32 / 2.0)..=RESOLUTION as f32 / 2.0,
-                        self.y_pan,
-                        Message::VerticalSlider
-                    )
+                    widget::vertical_slider(-50.0..=50.0, 0.0, Message::VerticalSlider)
                 ],
-                widget::slider(
-                    -(RESOLUTION as f32 / 2.0)..=RESOLUTION as f32 / 2.0,
-                    self.x_pan,
-                    Message::Slider
-                ),
+                widget::slider(-50.0..=50.0, 0.0, Message::Slider),
                 widget::row![
                     widget::button(widget::text!("Zoom +").size(FONT_SIZE))
                         .on_press(Message::ZoomIn),
