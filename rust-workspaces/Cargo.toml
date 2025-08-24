@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = [ "graphing", "mandelbrot", "quine","subcrate-example"]
+members = [ "graphing", "mandelbrot", "quine", "scheduler","subcrate-example"]
 
 [workspace.package]
 version = "0.1.0"
