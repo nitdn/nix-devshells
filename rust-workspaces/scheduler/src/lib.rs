@@ -1,7 +1,9 @@
+use std::collections::vec_deque;
+use std::iter::{Enumerate, Flatten, Skip, Take};
 use std::{
     collections::{
         VecDeque,
-        vec_deque::{Iter, IterMut},
+        vec_deque::{IterMut},
     },
     iter,
 };
@@ -52,15 +54,17 @@ impl Scheduler {
             weights,
         }
     }
-    pub fn iter(&self) -> SchedulerIter {
+
+    pub fn iter<'s>(&'s self) -> SchedulerIter<'s> {
         SchedulerIter {
-            scheduler: self.queues.iter().map(|queue| queue.iter()).collect(),
-            buffer: Default::default(),
+            scheduler: &self.queues,
             weights: self.weights,
+            iterator: None,
+            index: 0,
         }
     }
 
-    pub fn iter_mut(&mut self) -> SchedulerIterMut {
+    pub fn iter_mut<'s>(&'s mut self) -> SchedulerIterMut<'s> {
         SchedulerIterMut {
             scheduler: self
                 .queues
@@ -103,31 +107,55 @@ impl IntoIterator for Scheduler {
     }
 }
 
-pub struct SchedulerIter<'a> {
-    scheduler: Vec<Iter<'a, Packet>>,
-    buffer: VecDeque<&'a Packet>,
+type PacketIter<'a> = Take<Skip<vec_deque::Iter<'a, Packet>>>;
+
+struct CustomMap<'a, IT: Iterator<Item = (usize, &'a VecDeque<Packet>)>> {
+    it: IT,
     weights: [usize; 8],
+    index: usize,
+}
+
+impl<'a, IT: Iterator<Item = (usize, &'a VecDeque<Packet>)>> Iterator for CustomMap<'a, IT> {
+    type Item = PacketIter<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (index, queue) = self.it.next()?;
+        Some(queue.iter().skip(self.weights[index] * self.index).take(self.weights[index]))
+    }
+}
+
+pub struct SchedulerIter<'a> {
+    scheduler: &'a [VecDeque<Packet>],
+    iterator: Option<Flatten<CustomMap<'a, Enumerate<std::slice::Iter<'a, VecDeque<Packet>>>>>>,
+    weights: [usize; 8],
+    index: usize,
 }
 
 impl<'a> Iterator for SchedulerIter<'a> {
     type Item = &'a Packet;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.buffer.is_empty() {
-            self.buffer.append(
-                &mut self
+        match self.iterator.iter_mut().flatten().next() {
+            None => {
+                let enumerated = self
                     .scheduler
-                    .iter_mut()
-                    .enumerate()
-                    .flat_map(|(index, queue)| {
-                        iter::repeat_with(|| queue.next())
-                            .take(self.weights[index])
-                            .flatten()
-                    })
-                    .collect(),
-            );
+                    .iter()
+                    .enumerate();
+
+                let mapped = CustomMap {
+                    it: enumerated,
+                    index: self.index,
+                    weights: self.weights,
+                };
+
+                self.iterator = Some(mapped.flatten());
+
+                self.index += 1;
+
+                self.iterator.iter_mut().flatten().next()
+            },
+            Some(value) => Some(value)
         }
-        self.buffer.pop_front()
     }
 }
 pub struct SchedulerIterMut<'a> {
