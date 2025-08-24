@@ -1,5 +1,12 @@
 use super::*;
 const WEIGHTS: [usize; 8] = [2, 5, 1, 8, 4, 3, 6, 7];
+
+#[test]
+#[should_panic]
+fn test_invalid_queue() {
+    let _ = Packet::new(132, 42, 1);
+}
+
 #[test]
 fn test_flow_order() {
     let mut scheduler = Scheduler::new(WEIGHTS);
@@ -9,9 +16,6 @@ fn test_flow_order() {
     scheduler.enqueue(&flow_1);
     scheduler.enqueue(&flow_2);
     scheduler.enqueue(&flow_3);
-    for packet in &scheduler {
-        dbg!(packet);
-    }
     assert_eq!(
         flow_1.iter().collect::<Vec<&Packet>>(),
         scheduler

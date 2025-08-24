@@ -12,6 +12,7 @@ pub struct Packet {
 
 impl Packet {
     pub fn new(payload: u64, class: u8, flow: u16) -> Self {
+        assert!(class < 8);
         Self {
             payload,
             class,
