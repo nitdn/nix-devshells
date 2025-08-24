@@ -1,5 +1,8 @@
 use std::{
-    collections::{VecDeque, vec_deque::Iter},
+    collections::{
+        VecDeque,
+        vec_deque::{Iter, IterMut},
+    },
     iter,
 };
 
@@ -52,7 +55,19 @@ impl Scheduler {
     pub fn iter(&self) -> SchedulerIter {
         SchedulerIter {
             scheduler: self.queues.iter().map(|queue| queue.iter()).collect(),
-            buffer: VecDeque::new(),
+            buffer: Default::default(),
+            weights: self.weights,
+        }
+    }
+
+    pub fn iter_mut(&mut self) -> SchedulerIterMut {
+        SchedulerIterMut {
+            scheduler: self
+                .queues
+                .iter_mut()
+                .map(|queue| queue.iter_mut())
+                .collect(),
+            buffer: Default::default(),
             weights: self.weights,
         }
     }
@@ -65,6 +80,26 @@ impl<'a> IntoIterator for &'a Scheduler {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
+    }
+}
+impl<'a> IntoIterator for &'a mut Scheduler {
+    type Item = &'a mut Packet;
+
+    type IntoIter = SchedulerIterMut<'a>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
+impl IntoIterator for Scheduler {
+    type Item = Packet;
+    type IntoIter = SchedulerIntoIter;
+    fn into_iter(self) -> Self::IntoIter {
+        Self::IntoIter {
+            scheduler: self,
+            buffer: Default::default(),
+        }
     }
 }
 
@@ -87,6 +122,61 @@ impl<'a> Iterator for SchedulerIter<'a> {
                     .flat_map(|(index, queue)| {
                         iter::repeat_with(|| queue.next())
                             .take(self.weights[index])
+                            .flatten()
+                    })
+                    .collect(),
+            );
+        }
+        self.buffer.pop_front()
+    }
+}
+pub struct SchedulerIterMut<'a> {
+    scheduler: Vec<IterMut<'a, Packet>>,
+    buffer: VecDeque<&'a mut Packet>,
+    weights: [usize; 8],
+}
+
+impl<'a> Iterator for SchedulerIterMut<'a> {
+    type Item = &'a mut Packet;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.buffer.is_empty() {
+            self.buffer.append(
+                &mut self
+                    .scheduler
+                    .iter_mut()
+                    .enumerate()
+                    .flat_map(|(index, queue)| {
+                        iter::repeat_with(|| queue.next())
+                            .take(self.weights[index])
+                            .flatten()
+                    })
+                    .collect(),
+            );
+        }
+        self.buffer.pop_front()
+    }
+}
+
+pub struct SchedulerIntoIter {
+    scheduler: Scheduler,
+    buffer: VecDeque<Packet>,
+}
+
+impl Iterator for SchedulerIntoIter {
+    type Item = Packet;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let queues = &mut self.scheduler.queues;
+        let weights = self.scheduler.weights;
+        if self.buffer.is_empty() {
+            self.buffer.append(
+                &mut queues
+                    .iter_mut()
+                    .enumerate()
+                    .flat_map(|(index, queue)| {
+                        iter::repeat_with(|| queue.pop_front())
+                            .take(weights[index])
                             .flatten()
                     })
                     .collect(),

@@ -17,11 +17,12 @@ fn test_flow_order() {
     scheduler.enqueue(&flow_2);
     scheduler.enqueue(&flow_3);
     assert_eq!(
-        flow_1.iter().collect::<Vec<&Packet>>(),
+        flow_1,
         scheduler
-            .iter()
+            .clone()
+            .into_iter()
             .filter(|packet| packet.flow == 1)
-            .collect::<Vec<&Packet>>()
+            .collect::<Vec<Packet>>()
     );
     assert_eq!(
         flow_2.iter().collect::<Vec<&Packet>>(),
@@ -37,6 +38,15 @@ fn test_flow_order() {
             .filter(|packet| packet.flow == 3)
             .collect::<Vec<&Packet>>()
     );
+    assert_eq!(
+        scheduler.iter().collect::<Vec::<_>>(),
+        scheduler
+            .clone()
+            .into_iter()
+            .collect::<Vec::<_>>()
+            .iter()
+            .collect::<Vec<_>>(),
+    )
 }
 
 #[test]
@@ -46,7 +56,7 @@ fn test_weighting() {
         let packets: Vec<Packet> = (0..5).map(|flow| Packet::new(0, queue, flow)).collect();
         scheduler.enqueue(&packets);
     }
-    for packet in scheduler.iter().take(WEIGHTS[0]) {
+    for packet in scheduler.clone().iter().take(WEIGHTS[0]) {
         assert_eq!(0, packet.class);
     }
     for packet in scheduler.iter().skip(WEIGHTS[0]).take(WEIGHTS[1]) {
