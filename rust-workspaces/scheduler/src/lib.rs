@@ -1,10 +1,7 @@
 use std::collections::vec_deque;
 use std::iter::{Enumerate, Flatten, Skip, Take};
 use std::{
-    collections::{
-        VecDeque,
-        vec_deque::{IterMut},
-    },
+    collections::{VecDeque, vec_deque::IterMut},
     iter,
 };
 
@@ -16,12 +13,15 @@ pub struct Packet {
 }
 
 impl Packet {
-    pub fn new(payload: u64, class: u8, flow: u16) -> Self {
-        assert!(class < 8);
-        Self {
-            payload,
-            class,
-            flow,
+    pub fn new(payload: u64, class: u8, flow: u16) -> Result<Self, String> {
+        if class > 7 {
+            Err(format!("Class cannot be greater than 7: Found {class}"))
+        } else {
+            Ok(Self {
+                payload,
+                class,
+                flow,
+            })
         }
     }
 }
@@ -120,7 +120,12 @@ impl<'a, IT: Iterator<Item = (usize, &'a VecDeque<Packet>)>> Iterator for Custom
 
     fn next(&mut self) -> Option<Self::Item> {
         let (index, queue) = self.it.next()?;
-        Some(queue.iter().skip(self.weights[index] * self.index).take(self.weights[index]))
+        Some(
+            queue
+                .iter()
+                .skip(self.weights[index] * self.index)
+                .take(self.weights[index]),
+        )
     }
 }
 
@@ -137,10 +142,7 @@ impl<'a> Iterator for SchedulerIter<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         match self.iterator.iter_mut().flatten().next() {
             None => {
-                let enumerated = self
-                    .scheduler
-                    .iter()
-                    .enumerate();
+                let enumerated = self.scheduler.iter().enumerate();
 
                 let mapped = CustomMap {
                     it: enumerated,
@@ -153,8 +155,8 @@ impl<'a> Iterator for SchedulerIter<'a> {
                 self.index += 1;
 
                 self.iterator.iter_mut().flatten().next()
-            },
-            Some(value) => Some(value)
+            }
+            Some(value) => Some(value),
         }
     }
 }
