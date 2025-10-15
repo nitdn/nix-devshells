@@ -1,0 +1,11 @@
+[jobs.pedantic]
+command = [
+  "cargo",
+  "clippy",
+  "--",
+  "-W",
+  "clippy::pedantic",
+  "-A",
+  "clippy::struct_excessive_bools",
+]
+need_stdout = false
