@@ -63,9 +63,9 @@
           # Per-system attributes can be defined here. The self' and inputs'
           # module parameters provide easy access to attributes of the same
           # system.
-          packages.default = self'.packages.rust;
+          packages.default = self'.packages.hello;
           # An example configuration
-          rust-project.crates."rust".crane = {
+          rust-project.crates."hello".crane = {
             args = {
               inherit buildInputs;
               nativeBuildInputs = with pkgs; [
