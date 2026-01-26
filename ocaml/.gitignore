@@ -1,0 +1,4 @@
+*.orig
+.direnv
+result
+/**/flake.lock

@@ -15,5 +15,9 @@
           This comes with jj-vcs so you should use `jj git init`.
         '';
       };
+      templates.ocaml = {
+        path = ./ocaml;
+        description = "Ocaml templates";
+      };
     };
 }
