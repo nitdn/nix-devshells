@@ -4,14 +4,12 @@
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
-    treefmt-nix = {
-      url = "github:numtide/treefmt-nix";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    rust-flake = {
-      url = "github:juspay/rust-flake";
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -24,8 +22,6 @@
         # 1. Add foo to inputs
         # 2. Add foo as a parameter to the outputs function
         # 3. Add here: foo.flakeModule
-        inputs.rust-flake.flakeModules.default
-        inputs.rust-flake.flakeModules.nixpkgs
         inputs.treefmt-nix.flakeModule
       ];
       systems = [
@@ -44,6 +40,20 @@
           ...
         }:
         let
+          inherit (inputs) nixpkgs rust-overlay;
+
+          pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ rust-overlay.overlays.default ];
+          };
+
+          buildRustCrateForPkgs =
+            crate:
+            pkgs.buildRustCrate.override {
+              rustc = pkgs.rust-bin.stable.latest.default;
+              cargo = pkgs.rust-bin.stable.latest.default;
+            };
+
           buildInputs = with pkgs; [
             expat
             fontconfig
@@ -58,30 +68,23 @@
             wayland
             libxkbcommon
           ];
+
+          cargo_nix = pkgs.callPackage ./Cargo.nix {
+            inherit pkgs buildRustCrateForPkgs;
+          };
         in
         {
           # Per-system attributes can be defined here. The self' and inputs'
           # module parameters provide easy access to attributes of the same
           # system.
-          packages.default = self'.packages.hello;
-          # An example configuration
-          rust-project.crates."hello".crane = {
-            args = {
-              inherit buildInputs;
-              nativeBuildInputs = with pkgs; [
-                # makeWrapper
-                pkg-config
-              ];
-            };
-            #   extraBuildArgs = {
-            #     postInstall = ''
-            #       # The Space between LD_LIBRARY_PATH and : is very important
-            #       wrapProgram $out/bin/template --prefix LD_LIBRARY_PATH : \
-            #       ${builtins.toString (pkgs.lib.makeLibraryPath buildInputs)}
-            #     '';
-            #   };
+          packages.default = config.packages.hello;
+          packages.hello = cargo_nix.rootCrate.build;
+
+          checks.rustnix = cargo_nix.rootCrate.build.override {
+            runTests = true;
           };
 
+          # An example configuration
           treefmt.programs = {
             nixfmt.enable = true;
             rustfmt.enable = true;
@@ -92,11 +95,11 @@
             taplo.enable = true;
           };
 
+          treefmt.settings.excludes = [ "Cargo.nix" ];
+
           devShells.default = pkgs.mkShell {
-            inputsFrom = [
-              self'.devShells.rust
-            ];
             packages = [
+              pkgs.crate2nix
               pkgs.bacon
               pkgs.vscode-extensions.vadimcn.vscode-lldb.adapter
               pkgs.jujutsu
