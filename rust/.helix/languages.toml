@@ -2,22 +2,15 @@
 name = "rust"
 
 [language.debugger]
-command = "codelldb"
-name = "codelldb"
-port-arg = "--port {}"
-transport = "tcp"
+name = "lldb-dap"
+transport = "stdio"
+command = "lldb-dap"
 
 [[language.debugger.templates]]
 name = "binary"
 request = "launch"
-[[language.debugger.templates.completion]]
-completion = "filename"
-name = "binary"
-
-[language.debugger.templates.args]
-program = "{0}"
-runInTerminal = true
-
+completion = [ { name = "binary", completion = "filename" } ]
+args = { program = "{0}", initCommands = [ "command script import ./tools/lldb_vscode_rustc_primer.py" ] }
 
 [language-server.rust-analyzer.config]
 check.command = "clippy"

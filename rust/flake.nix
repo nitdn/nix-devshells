@@ -99,10 +99,14 @@
 
           devShells.default = pkgs.mkShell {
             packages = [
-              pkgs.crate2nix
               pkgs.bacon
-              pkgs.vscode-extensions.vadimcn.vscode-lldb.adapter
-              pkgs.jujutsu
+              pkgs.cargo
+              pkgs.clippy
+              pkgs.rustfmt
+              pkgs.rustc
+              pkgs.rust-analyzer
+              pkgs.crate2nix
+              pkgs.llvmPackages.lldb
             ];
             # An example enviroment setup
             # LD_LIBRARY_PATH = builtins.toString (pkgs.lib.makeLibraryPath buildInputs);
