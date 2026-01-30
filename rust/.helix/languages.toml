@@ -10,7 +10,7 @@ command = "lldb-dap"
 name = "binary"
 request = "launch"
 completion = [ { name = "binary", completion = "filename" } ]
-args = { program = "{0}", initCommands = [ "command script import ./tools/lldb_vscode_rustc_primer.py" ] }
+args = { program = "{0}", initCommands = [ "command script import tools/lldb_dap_rustc_primer.py" ] }
 
 [language-server.rust-analyzer.config]
 check.command = "clippy"

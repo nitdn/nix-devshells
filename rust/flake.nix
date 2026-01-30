@@ -4,6 +4,11 @@
   inputs = {
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    helix = {
+      url = "github:helix-editor/helix/master";
+      inputs.rust-overlay.follows = "rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -107,10 +112,15 @@
               pkgs.rust-analyzer
               pkgs.crate2nix
               pkgs.llvmPackages.lldb
+              inputs'.helix.packages.default
             ];
             # An example enviroment setup
             # LD_LIBRARY_PATH = builtins.toString (pkgs.lib.makeLibraryPath buildInputs);
           };
         };
     };
+  nixConfig = {
+    extra-substituters = [ "https://helix.cachix.org" ];
+    extra-trusted-public-keys = [ "helix.cachix.org-1:ejp9KQpR1FBI2onstMQ34yogDm4OgU2ru6lIwPvuCVs=" ];
+  };
 }
