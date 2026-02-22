@@ -25,17 +25,20 @@
           ...
         }:
         let
-          nativeBuildInputs = with pkgs.ocamlPackages; [
+          ocamlPackages = pkgs.ocamlPackages_latest;
+          nativeBuildInputs = with ocamlPackages; [
             findlib
             dune_3
             batteries
+            ocaml
           ];
         in
         {
           devShells.default = pkgs.mkShell {
             packages = [
-              pkgs.ocamlPackages.ocaml-lsp
-              pkgs.ocamlPackages.utop
+              ocamlPackages.ocaml-lsp
+              ocamlPackages.ocamlformat
+              ocamlPackages.utop
             ];
             inherit nativeBuildInputs;
           };

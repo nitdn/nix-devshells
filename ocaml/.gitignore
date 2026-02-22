@@ -1,4 +1,5 @@
 *.orig
 .direnv
 result
+_build
 /**/flake.lock
