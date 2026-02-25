@@ -6,8 +6,6 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     helix = {
       url = "github:helix-editor/helix/master";
-      inputs.rust-overlay.follows = "rust-overlay";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
